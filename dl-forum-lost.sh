@@ -1,5 +1,7 @@
 #!env bash
 
+MINIMUM_DAYS_ABSENT=2
+
 if [ "$#" -ne 2 ]; then
     echo "Illegal number of parameters"
     exit
@@ -49,14 +51,15 @@ SEARCH_ID=$(echo $INDEX_PAGE | grep -oE "PG_BASE_URL: 'tracker.php\?search_id=\w
 SEARCH_RESULTS=$(echo $INDEX_PAGE | grep -oE ': [0-9]+ <span class="normal">\(max:' | grep -oE "[0-9]+")
 
 echo "${SEARCH_RESULTS} results. Processing..."
+true $((SEARCH_RESULTS=SEARCH_RESULTS-1))
 
 i=0
-while [ $i -lt $SEARCH_RESULTS ]
+while [ $i -le ${SEARCH_RESULTS} ]
 do
 
   page=0
-  while [ $page -lt 50 ]
-  do
+#  while [ $page -lt 50 ]
+#  do
     if [ "$i" = "0" ]; then
       # we already fetch first page
       OUT=$INDEX_PAGE
@@ -71,26 +74,33 @@ do
       URL=$( echo $1 | tr -d \"-)
       DAYS=$( echo $2 | tr -d \"-)
       ID=$(echo $URL | tr -Cd 0-9)
-      echo "Result #$page ($i total) [ID=$ID, absent for $DAYS days]"
+      echo -n "$i/$SEARCH_RESULTS [$ID] - absent for $DAYS days"
 
       if [ -e "$TARGET_PATH/$ID.torrent" ]; then
-        echo "- Already exists, skipping"
+        echo " - Skipping (already exists)"
+      elif [ $DAYS -lt $MINIMUM_DAYS_ABSENT ]; then
+        echo " - Skipping (< $MINIMUM_DAYS_ABSENT days)"
       else
-        if [ $(echo "DAYS" | grep -v "-") = "" ]; then
-          echo "- There is ${DAYS} seeder(s) at moment, fetching anyway"
-        fi
+        # TODO support for negative MINIMUM_DAYS_ABSENT
+        #if [ $MINIMUM_DAYS_ABSENT -lt 0 && $(echo "DAYS" | grep -v "-") = "" ]; then
+        #  echo -n "- There is ${DAYS} seeder(s) at moment, fetching anyway"
+        #fi
 
-        echo "- Fetching"
+        echo -n " - Fetching: "
         RES=`curl  --fail -w 'Return code: %{http_code}' ${CURL_OPTS} -d form_token=$TOKEN -o "$TARGET_PATH/$ID.torrent" "https://rutracker.org/forum/$URL"`
 
         # TODO - check it downloaded OK
         if [ "$RES" = "Return code: 200" ]; then
           # callback script to feed torrent file to your BitTorrent client
           if [ -x "$SCRIPT_PATH/add_torrent.sh" ]; then
+            echo -n "OK Adding: "
             echo `$SCRIPT_PATH/add_torrent.sh "$ID" "$DAYS" "$TARGET_PATH/$ID.torrent"`
+          else
+            echo "OK"
           fi
         else
-          echo "- Fetch error!"
+          echo "FAILED"
+          rm "$TARGET_PATH/$ID.torrent" 2>/dev/null
         fi
       fi
 
@@ -99,8 +109,8 @@ do
       true $((page=page+1))
     done
     if [ "$page" = "0" ]; then
-      echo "No results, exiting."
+      echo "No new results, exiting."
       exit
     fi
-  done
+#  done
 done
