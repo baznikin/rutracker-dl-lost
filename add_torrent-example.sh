@@ -1,4 +1,10 @@
-#!/bin/bash
+#!env bash
+
+# Example script to add torrent to your torrent client
+# It takes 3 parameters
+# - path to .torrent file
+# - path to download torrent to
+# - days since full seed was online (can be used as priority)
 
 if [ "$#" -ne 3 ]; then
     echo "Illegal number of parameters"
