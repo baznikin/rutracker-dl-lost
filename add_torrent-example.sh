@@ -28,8 +28,13 @@ mkdir -p "${INCOMPLETE_PATH}/${ID}"
 DL_TARGET=$(echo $TARGET_PATH | sed -E "s/\/mnt\/tank\/share\/music\/RUTracker-Keepers/\/Shared\/RUTracker-Keepers/")	# /Shared/RUTracker-Keepers/2287-jazz
 DL_INCOMPLETE=$(echo $INCOMPLETE_PATH | sed -E "s/\/mnt\/tank\/share\/music\/RUTracker-Keepers/\/Shared\/RUTracker-Keepers/")
 DL_TORRENT=$(echo $TORRENT_PATH | sed -E "s/\/mnt\/tank\/share\/music\/RUTracker-Keepers/\/Shared\/RUTracker-Keepers/")
+
+
+# !!
+# Your actuall torrent client call here:
 OUT=`iocage exec deluge "LANG=ru_RU.UTF-8 deluge-console -c /usr/local/etc/deluge/ 'add -m ${DL_TARGET}/${ID}/ -p ${DL_INCOMPLETE}/${ID}/ ${DL_TORRENT}'"`;
 
+# Make output simpler
 if [ "$(echo "$OUT" | grep "Torrent added")" != "" ]; then
  echo "OK"
 else
